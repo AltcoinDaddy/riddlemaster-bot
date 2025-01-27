@@ -1,0 +1,19 @@
+{
+  "name": "riddlemaster-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@discordjs/builders": "^1.10.0",
+    "@supabase/supabase-js": "^2.48.1",
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.7",
+    "mongodb": "^6.12.0"
+  }
+}
