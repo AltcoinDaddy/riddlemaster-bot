@@ -7,38 +7,32 @@ module.exports = {
         .setDescription('Start a new round of riddles')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
     async execute(interaction) {
-        try {
-            if (!interaction.member.permissions.has('MANAGE_GUILD')) {
-                return await interaction.reply({ 
-                    content: 'Only moderators can start rounds!',
-                    ephemeral: true 
-                });
-            }
+        if (!interaction.member.permissions.has('MANAGE_GUILD')) {
+            return await interaction.reply({ 
+                content: 'Only moderators can start rounds!',
+                ephemeral: true 
+            });
+        }
 
-            // Delete all records from users table
-            try {
-                await supabase
-                    .from('users')
-                    .delete()
-                    .neq('discord_id', '');
-            } catch (dbError) {
-                console.error('Database error:', dbError);
-            }
+        try {
+            await supabase
+                .from('users')
+                .delete()
+                .neq('discord_id', '');
 
             const roundNumber = global.roundManager.startNewRound();
-
-            // Single reply at the end
-            return await interaction.reply(`🎮 Round ${roundNumber} started! Leaderboard has been reset!`);
+            
+            return await interaction.reply({
+                embeds: [{
+                    title: '🎮 New Round Started!',
+                    description: `Round ${roundNumber} has begun!\nLeaderboard has been reset.`,
+                    color: 0x00ff00
+                }]
+            });
 
         } catch (error) {
-            console.error('Error:', error);
-            // Only reply if we haven't already
-            if (!interaction.replied) {
-                return await interaction.reply({ 
-                    content: 'Error starting round!',
-                    ephemeral: true 
-                });
-            }
+            console.error('Start round error:', error);
+            throw error;
         }
     }
 };
