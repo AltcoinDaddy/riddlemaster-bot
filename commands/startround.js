@@ -8,22 +8,37 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
     async execute(interaction) {
         try {
-            // Delete all records from users table
-            const { error: deleteError } = await supabase
-                .from('users')
-                .delete()
-                .neq('discord_id', '');
+            if (!interaction.member.permissions.has('MANAGE_GUILD')) {
+                return await interaction.reply({ 
+                    content: 'Only moderators can start rounds!',
+                    ephemeral: true 
+                });
+            }
 
-            if (deleteError) {
-                console.error('Error deleting users:', deleteError);
-                return await interaction.reply('Error resetting leaderboard!');
+            // Delete all records from users table
+            try {
+                await supabase
+                    .from('users')
+                    .delete()
+                    .neq('discord_id', '');
+            } catch (dbError) {
+                console.error('Database error:', dbError);
             }
 
             const roundNumber = global.roundManager.startNewRound();
-            return await interaction.reply(`Round ${roundNumber} started! Leaderboard has been reset!`);
+
+            // Single reply at the end
+            return await interaction.reply(`🎮 Round ${roundNumber} started! Leaderboard has been reset!`);
+
         } catch (error) {
             console.error('Error:', error);
-            return await interaction.reply('Error starting round!');
+            // Only reply if we haven't already
+            if (!interaction.replied) {
+                return await interaction.reply({ 
+                    content: 'Error starting round!',
+                    ephemeral: true 
+                });
+            }
         }
     }
 };
