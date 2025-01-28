@@ -13,10 +13,8 @@ const client = new Client({
     ]
 });
 
-// Initialize collections
-client.commands = new Collection();
 global.roundManager = new RoundManager();
-global.activeRiddles = new Map();
+client.commands = new Collection();
 
 // Load commands
 const commandsPath = path.join(__dirname, 'commands');
@@ -29,18 +27,23 @@ for (const file of commandFiles) {
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
-    
+
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
 
     try {
+        await interaction.deferReply();
         await command.execute(interaction);
     } catch (error) {
-        console.error('Error executing command:', error);
+        console.error('Error:', error);
         try {
-            await interaction.reply({ content: 'Error executing command!', ephemeral: true });
-        } catch (e) {
-            console.error('Error sending error message:', e);
+            if (interaction.deferred) {
+                await interaction.editReply('An error occurred! Please try again.');
+            } else {
+                await interaction.reply('An error occurred! Please try again.');
+            }
+        } catch (err) {
+            console.error('Error sending error message:', err);
         }
     }
 });
@@ -49,7 +52,6 @@ client.once('ready', () => {
     console.log('RiddleMaster is online!');
 });
 
-// Error handling
 process.on('unhandledRejection', error => {
     console.error('Unhandled promise rejection:', error);
 });
