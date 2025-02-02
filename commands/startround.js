@@ -8,11 +8,12 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
     async execute(interaction) {
         try {
-            // Check if user has manage server or admin permissions
-            if (!interaction.member.permissions.has(['MANAGE_GUILD']) && 
-                !interaction.member.permissions.has(['ADMINISTRATOR'])) {
+            // Fix permission check - use single permission strings
+            if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild) && 
+                !interaction.memberPermissions.has(PermissionFlagsBits.Administrator)) {
                 return await interaction.reply({
-                    content: 'You need Manage Server or Administrator permissions to start rounds!'
+                    content: 'You need Manage Server or Administrator permissions to start rounds!',
+                    ephemeral: true
                 });
             }
 
@@ -32,7 +33,10 @@ module.exports = {
             });
         } catch (error) {
             console.error('Start round error:', error);
-            return await interaction.reply('Error starting round!');
+            return await interaction.reply({ 
+                content: 'An error occurred while starting the round.',
+                ephemeral: true 
+            });
         }
     }
 };
