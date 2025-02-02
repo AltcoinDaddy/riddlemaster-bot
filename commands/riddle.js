@@ -15,12 +15,19 @@ module.exports = {
             .setRequired(true)),
     async execute(interaction) {
         try {
-            if (!interaction.member.permissions.has('MANAGE_GUILD')) {
-                return await interaction.reply('Only moderators can post riddles!');
+            // Fixed permission check
+            if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+                return await interaction.reply({
+                    content: 'Only moderators can post riddles!',
+                    flags: { ephemeral: true }
+                });
             }
 
             if (!global.roundManager.isRoundActive) {
-                return await interaction.reply('No active round! Use /startround to begin.');
+                return await interaction.reply({
+                    content: 'No active round! Use /startround to begin.',
+                    flags: { ephemeral: true }
+                });
             }
 
             const question = interaction.options.getString('question');
@@ -54,7 +61,10 @@ module.exports = {
 
         } catch (error) {
             console.error('Error:', error);
-            await interaction.reply('Error executing command!');
+            await interaction.reply({
+                content: 'Error executing command!',
+                flags: { ephemeral: true }
+            });
         }
     },
 };
