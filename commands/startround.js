@@ -12,8 +12,7 @@ module.exports = {
             if (!interaction.member.permissions.has(['MANAGE_GUILD']) && 
                 !interaction.member.permissions.has(['ADMINISTRATOR'])) {
                 return await interaction.reply({
-                    content: 'You need Manage Server or Administrator permissions to start rounds!',
-                    flags: { ephemeral: true }
+                    content: 'You need Manage Server or Administrator permissions to start rounds!'
                 });
             }
 
@@ -33,10 +32,7 @@ module.exports = {
             });
         } catch (error) {
             console.error('Start round error:', error);
-            return await interaction.reply({ 
-                content: 'Error starting round!',
-                flags: { ephemeral: true }
-            });
+            return await interaction.reply('Error starting round!');
         }
     }
 };
