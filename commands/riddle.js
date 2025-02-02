@@ -4,7 +4,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('riddle')
         .setDescription('Post a riddle')
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .addStringOption(option =>
             option.setName('question')
             .setDescription('The riddle question')
@@ -15,8 +15,7 @@ module.exports = {
             .setRequired(true)),
     async execute(interaction) {
         try {
-            // Fixed permission check
-            if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+            if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
                 return await interaction.reply({
                     content: 'Only moderators can post riddles!',
                     flags: { ephemeral: true }

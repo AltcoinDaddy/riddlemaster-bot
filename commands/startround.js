@@ -5,15 +5,13 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('startround')
         .setDescription('Start a new round of riddles')
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
     async execute(interaction) {
         try {
-            // Fix permission check - use single permission strings
-            if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild) && 
-                !interaction.memberPermissions.has(PermissionFlagsBits.Administrator)) {
+            if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
                 return await interaction.reply({
-                    content: 'You need Manage Server or Administrator permissions to start rounds!',
-                    ephemeral: true
+                    content: 'You need Moderator permissions to start rounds!',
+                    flags: { ephemeral: true }
                 });
             }
 
@@ -35,7 +33,7 @@ module.exports = {
             console.error('Start round error:', error);
             return await interaction.reply({ 
                 content: 'An error occurred while starting the round.',
-                ephemeral: true 
+                flags: { ephemeral: true }
             });
         }
     }
