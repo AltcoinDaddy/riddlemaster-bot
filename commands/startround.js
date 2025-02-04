@@ -8,33 +8,29 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
     async execute(interaction) {
         try {
-            if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
-                return await interaction.reply({
-                    content: 'You need Moderator permissions to start rounds!',
-                    flags: { ephemeral: true }
-                });
-            }
-
+            // Reset all scores to 0
             await supabase
                 .from('users')
-                .delete()
+                .update({ score: 0 })
                 .neq('discord_id', '');
 
-            const roundNumber = global.roundManager.startNewRound();
+            global.roundManager.startNewRound();
             
-            return await interaction.reply({
+            await interaction.reply({
                 embeds: [{
                     title: '🎮 New Round Started!',
-                    description: `Round ${roundNumber} has begun!\nLeaderboard has been reset.`,
+                    description: 'A new round has begun!\nLeaderboard has been reset.',
                     color: 0x00ff00
                 }]
             });
         } catch (error) {
             console.error('Start round error:', error);
-            return await interaction.reply({ 
-                content: 'An error occurred while starting the round.',
-                flags: { ephemeral: true }
-            });
+            if (!interaction.replied) {
+                await interaction.reply({
+                    content: 'An error occurred while starting the round.',
+                    ephemeral: true
+                });
+            }
         }
     }
 };

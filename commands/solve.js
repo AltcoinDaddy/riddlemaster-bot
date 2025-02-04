@@ -39,17 +39,16 @@ module.exports = {
 
             if (userAnswer === activeRiddle.answer.toLowerCase()) {
                 activeRiddle.solved = true;
-
+                
                 try {
-                    // First, get current user score
-                    const { data: userData } = await supabase
+                    // Get current score
+                    const { data } = await supabase
                         .from('users')
                         .select('score')
                         .eq('discord_id', interaction.user.id)
                         .single();
 
-                    const currentScore = userData?.score || 0;
-                    const newScore = currentScore + 1;
+                    const newScore = (data?.score || 0) + 1;
 
                     // Update score
                     await supabase
@@ -59,6 +58,7 @@ module.exports = {
                             score: newScore
                         });
 
+                    // Send success message
                     await interaction.reply({
                         embeds: [{
                             title: '🎉 Correct Answer!',
@@ -67,8 +67,8 @@ module.exports = {
                         }]
                     });
 
+                    // Handle round end if last riddle
                     if (activeRiddle.isLastRiddle) {
-                        // Get top 3 scores
                         const { data: winners } = await supabase
                             .from('users')
                             .select('discord_id, score')
@@ -77,18 +77,22 @@ module.exports = {
                             .limit(3);
 
                         if (winners?.length > 0) {
-                            let winnersText = '🏆 Round Winners 🏆\n\n';
+                            let winnerText = '🏆 Winners 🏆\n\n';
                             const medals = ['🥇', '🥈', '🥉'];
                             
                             for (let i = 0; i < winners.length; i++) {
-                                const member = await interaction.guild.members.fetch(winners[i].discord_id);
-                                winnersText += `${medals[i]} ${member.displayName}: ${winners[i].score} points\n`;
+                                try {
+                                    const member = await interaction.guild.members.fetch(winners[i].discord_id);
+                                    winnerText += `${medals[i]} ${member.displayName}: ${winners[i].score} points\n`;
+                                } catch (err) {
+                                    console.error('Error fetching member:', err);
+                                }
                             }
 
                             await interaction.channel.send({
                                 embeds: [{
                                     title: '🎉 Round Complete!',
-                                    description: winnersText,
+                                    description: winnerText,
                                     color: 0xffd700
                                 }]
                             });
@@ -101,12 +105,10 @@ module.exports = {
 
                 } catch (error) {
                     console.error('Error:', error);
-                    if (!interaction.replied) {
-                        await interaction.reply({
-                            content: 'Error updating score!',
-                            ephemeral: true
-                        });
-                    }
+                    await interaction.reply({
+                        content: 'Error updating score!',
+                        ephemeral: true
+                    });
                 }
             } else {
                 await interaction.reply({
@@ -114,6 +116,7 @@ module.exports = {
                     ephemeral: true
                 });
             }
+
         } catch (error) {
             console.error('Error:', error);
             if (!interaction.replied) {
