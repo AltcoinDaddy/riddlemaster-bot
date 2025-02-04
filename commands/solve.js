@@ -39,35 +39,38 @@ module.exports = {
 
             if (userAnswer === activeRiddle.answer.toLowerCase()) {
                 activeRiddle.solved = true;
-                
+
                 try {
                     // Get current score
-                    const { data } = await supabase
+                    const { data: userData } = await supabase
                         .from('users')
                         .select('score')
                         .eq('discord_id', interaction.user.id)
                         .single();
 
-                    const newScore = (data?.score || 0) + 1;
+                    const newScore = (userData?.score || 0) + 1;
 
-                    // Update score
+                    // Update score in database
                     await supabase
                         .from('users')
                         .upsert({
                             discord_id: interaction.user.id,
                             score: newScore
+                        }, {
+                            onConflict: 'discord_id',
+                            update: { score: newScore }
                         });
 
                     // Send success message
                     await interaction.reply({
                         embeds: [{
                             title: '🎉 Correct Answer!',
-                            description: `${interaction.user} solved it!\nAnswer: ${activeRiddle.answer}\nPoints: ${newScore}`,
+                            description: `${interaction.user} solved it!\nAnswer: ${activeRiddle.answer}`,
                             color: 0x00ff00
                         }]
                     });
 
-                    // Handle round end if last riddle
+                    // Handle round ending
                     if (activeRiddle.isLastRiddle) {
                         const { data: winners } = await supabase
                             .from('users')
@@ -76,27 +79,26 @@ module.exports = {
                             .order('score', { ascending: false })
                             .limit(3);
 
+                        let winnersText = '🏆 Round Complete! 🏆\n\n';
+                        
                         if (winners?.length > 0) {
-                            let winnerText = '🏆 Winners 🏆\n\n';
                             const medals = ['🥇', '🥈', '🥉'];
-                            
-                            for (let i = 0; i < winners.length; i++) {
-                                try {
-                                    const member = await interaction.guild.members.fetch(winners[i].discord_id);
-                                    winnerText += `${medals[i]} ${member.displayName}: ${winners[i].score} points\n`;
-                                } catch (err) {
-                                    console.error('Error fetching member:', err);
-                                }
+                            for (const [index, winner] of winners.entries()) {
+                                const member = await interaction.guild.members.fetch(winner.discord_id);
+                                winnersText += `${medals[index]} ${member.displayName}: ${winner.score} points\n`;
                             }
-
-                            await interaction.channel.send({
-                                embeds: [{
-                                    title: '🎉 Round Complete!',
-                                    description: winnerText,
-                                    color: 0xffd700
-                                }]
-                            });
                         }
+
+                        await interaction.channel.send({
+                            embeds: [{
+                                title: '🎊 Round Results 🎊',
+                                description: winnersText,
+                                color: 0xffd700,
+                                footer: {
+                                    text: 'Use /startround to begin a new round!'
+                                }
+                            }]
+                        });
 
                         global.roundManager.isRoundActive = false;
                     }
@@ -105,10 +107,12 @@ module.exports = {
 
                 } catch (error) {
                     console.error('Error:', error);
-                    await interaction.reply({
-                        content: 'Error updating score!',
-                        ephemeral: true
-                    });
+                    if (!interaction.replied) {
+                        await interaction.reply({
+                            content: 'Error updating score!',
+                            ephemeral: true
+                        });
+                    }
                 }
             } else {
                 await interaction.reply({
@@ -116,7 +120,6 @@ module.exports = {
                     ephemeral: true
                 });
             }
-
         } catch (error) {
             console.error('Error:', error);
             if (!interaction.replied) {

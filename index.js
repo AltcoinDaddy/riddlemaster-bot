@@ -61,29 +61,36 @@ client.on('messageCreate', async message => {
         activeRiddle.solved = true;
         
         try {
-            const { data } = await supabase
+            // Get current score
+            const { data: userData } = await supabase
                 .from('users')
                 .select('score')
                 .eq('discord_id', message.author.id)
                 .single();
 
-            const newScore = (data?.score || 0) + 1;
+            const newScore = (userData?.score || 0) + 1;
 
+            // Update score
             await supabase
                 .from('users')
                 .upsert({
                     discord_id: message.author.id,
                     score: newScore
+                }, {
+                    onConflict: 'discord_id',
+                    update: { score: newScore }
                 });
 
+            // Send success message
             await message.channel.send({
                 embeds: [{
                     title: '🎉 Correct Answer!',
-                    description: `${message.author} solved it!\nAnswer: ${activeRiddle.answer}`,
+                    description: `${message.author} solved it!\nAnswer: ${activeRiddle.answer}\nPoints: ${newScore}`,
                     color: 0x00ff00
                 }]
             });
 
+            // Handle round ending
             if (activeRiddle.isLastRiddle) {
                 const { data: winners } = await supabase
                     .from('users')
@@ -93,23 +100,27 @@ client.on('messageCreate', async message => {
                     .limit(3);
 
                 if (winners?.length > 0) {
-                    let winnerText = '';
+                    let winnersText = '🏆 Round Complete! 🏆\n\n';
                     const medals = ['🥇', '🥈', '🥉'];
                     
                     for (let i = 0; i < winners.length; i++) {
                         try {
                             const member = await message.guild.members.fetch(winners[i].discord_id);
-                            winnerText += `${medals[i]} ${member.displayName}: ${winners[i].score} points\n`;
+                            winnersText += `${medals[i]} ${member.displayName}: ${winners[i].score} points\n`;
                         } catch (err) {
                             console.error(`Could not fetch member ${winners[i].discord_id}:`, err);
                         }
                     }
 
+                    // Send winners message
                     await message.channel.send({
                         embeds: [{
-                            title: '🎉 Round Complete!',
-                            description: winnerText,
-                            color: 0xffd700
+                            title: '🎊 Final Results 🎊',
+                            description: winnersText,
+                            color: 0xffd700,
+                            footer: {
+                                text: 'Type /startround to begin a new round!'
+                            }
                         }]
                     });
                 }
