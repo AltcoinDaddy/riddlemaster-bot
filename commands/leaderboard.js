@@ -4,48 +4,52 @@ const supabase = require('../db');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leaderboard')
-        .setDescription('View the current round\'s leaderboard'),
+        .setDescription('View current scores'),
     async execute(interaction) {
         try {
-            const { data: users } = await supabase
+            // Get top scores
+            const { data: users, error } = await supabase
                 .from('users')
-                .select('*')
-                .order('current_round_points', { ascending: false });
+                .select('discord_id, score')
+                .gt('score', 0)
+                .order('score', { ascending: false })
+                .limit(10);
+
+            if (error) throw error;
 
             if (!users || users.length === 0) {
-                return await interaction.reply('No scores recorded for this round yet!');
-            }
-
-            const leaderboardEmbed = {
-                title: '🏆 Current Round Leaderboard',
-                description: `Current Round: ${global.roundManager.currentRound || 1}`,
-                fields: [],
-                color: 0xffd700
-            };
-
-            const solvers = users.filter(u => u.current_round_solved > 0);
-            if (solvers.length > 0) {
-                let solversText = '';
-                for (let i = 0; i < solvers.length; i++) {
-                    const user = solvers[i];
-                    try {
-                        const member = await interaction.guild.members.fetch(user.discord_id);
-                        solversText += `${i + 1}. ${member.displayName}: ${user.current_round_points} points (${user.current_round_solved} solved)\n`;
-                    } catch (e) {
-                        console.error(`Could not fetch member ${user.discord_id}`);
-                    }
-                }
-                leaderboardEmbed.fields.push({
-                    name: '🎯 Solved Riddles',
-                    value: solversText || 'No riddles solved yet',
-                    inline: false
+                return await interaction.reply({
+                    content: 'No scores recorded yet!',
+                    ephemeral: true
                 });
             }
 
-            await interaction.reply({ embeds: [leaderboardEmbed] });
+            let leaderboardText = '';
+            for (let i = 0; i < users.length; i++) {
+                try {
+                    const member = await interaction.guild.members.fetch(users[i].discord_id);
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+                    leaderboardText += `${medal} ${member.displayName}: ${users[i].score} points\n`;
+                } catch (err) {
+                    console.error(`Could not fetch member ${users[i].discord_id}:`, err);
+                }
+            }
+
+            await interaction.reply({
+                embeds: [{
+                    title: '🏆 Current Scores',
+                    description: leaderboardText || 'Error displaying scores',
+                    color: 0xFFD700
+                }]
+            });
         } catch (error) {
             console.error('Error:', error);
-            await interaction.reply('Error fetching leaderboard!');
+            if (!interaction.replied) {
+                await interaction.reply({
+                    content: 'Error fetching leaderboard!',
+                    ephemeral: true
+                });
+            }
         }
     }
 };
