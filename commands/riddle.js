@@ -16,22 +16,21 @@ module.exports = {
     async execute(interaction) {
         try {
             if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
-                return await interaction.reply({
+                return interaction.reply({
                     content: 'Only moderators can post riddles!',
-                    flags: { ephemeral: true }
+                    ephemeral: true
                 });
             }
 
             if (!global.roundManager.isRoundActive) {
-                return await interaction.reply({
+                return interaction.reply({
                     content: 'No active round! Use /startround to begin.',
-                    flags: { ephemeral: true }
+                    ephemeral: true
                 });
             }
 
             const question = interaction.options.getString('question');
             const answer = interaction.options.getString('answer');
-            const timeLimit = 30000; // 30 seconds
 
             const currentQuestion = global.roundManager.questionsInRound + 1;
             const isLastRiddle = currentQuestion >= global.roundManager.maxQuestions;
@@ -46,24 +45,25 @@ module.exports = {
 
             await interaction.reply({
                 embeds: [{
-                    title: `🧩 Riddle ${currentQuestion}/${global.roundManager.maxQuestions}`,
+                    title: '🧩 Riddle',
                     description: question,
                     color: 0x00ff00,
                     footer: {
-                        text: isLastRiddle ? '🔥 Final riddle of this round!' : `${global.roundManager.maxQuestions - currentQuestion} riddles remaining`
+                        text: isLastRiddle ? '🔥 Final riddle!' : 'Keep going!'
                     }
                 }]
             });
 
-            // Only increment after successful riddle post
             global.roundManager.addQuestion();
 
         } catch (error) {
             console.error('Error:', error);
-            await interaction.reply({
-                content: 'Error executing command!',
-                flags: { ephemeral: true }
-            });
+            if (!interaction.replied) {
+                await interaction.reply({
+                    content: 'Error posting riddle!',
+                    ephemeral: true
+                });
+            }
         }
-    },
+    }
 };
