@@ -7,17 +7,22 @@ module.exports = {
         .setDescription('View current scores'),
     async execute(interaction) {
         try {
-            // Get top scores
-            const { data: users, error } = await supabase
+            const { data: scores, error } = await supabase
                 .from('users')
                 .select('discord_id, score')
                 .gt('score', 0)
                 .order('score', { ascending: false })
                 .limit(10);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Database error:', error);
+                return await interaction.reply({
+                    content: 'Error fetching scores!',
+                    ephemeral: true
+                });
+            }
 
-            if (!users || users.length === 0) {
+            if (!scores || scores.length === 0) {
                 return await interaction.reply({
                     content: 'No scores recorded yet!',
                     ephemeral: true
@@ -25,23 +30,26 @@ module.exports = {
             }
 
             let leaderboardText = '';
-            for (let i = 0; i < users.length; i++) {
+            const medals = ['🥇', '🥈', '🥉'];
+
+            for (let i = 0; i < scores.length; i++) {
                 try {
-                    const member = await interaction.guild.members.fetch(users[i].discord_id);
-                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-                    leaderboardText += `${medal} ${member.displayName}: ${users[i].score} points\n`;
+                    const member = await interaction.guild.members.fetch(scores[i].discord_id);
+                    const prefix = i < 3 ? medals[i] : `${i + 1}.`;
+                    leaderboardText += `${prefix} ${member.displayName}: ${scores[i].score} points\n`;
                 } catch (err) {
-                    console.error(`Could not fetch member ${users[i].discord_id}:`, err);
+                    console.error(`Could not fetch member ${scores[i].discord_id}:`, err);
                 }
             }
 
             await interaction.reply({
                 embeds: [{
                     title: '🏆 Current Scores',
-                    description: leaderboardText || 'Error displaying scores',
+                    description: leaderboardText || 'No scores to display',
                     color: 0xFFD700
                 }]
             });
+
         } catch (error) {
             console.error('Error:', error);
             if (!interaction.replied) {

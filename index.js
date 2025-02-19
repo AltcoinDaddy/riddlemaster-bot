@@ -48,22 +48,26 @@ client.on('interactionCreate', async interaction => {
 
 // Handle message-based riddle solving
 client.on('messageCreate', async message => {
-    // Ignore bot messages
-    if (message.author.bot) return;
+    // Debug logs
+    console.log('Message received:', {
+        content: message.content,
+        channel: message.channelId,
+        author: message.author.tag,
+        bot: message.author.bot
+    });
 
-    // Check channel permissions
-    const botPermissions = message.channel.permissionsFor(client.user);
-    if (!botPermissions?.has(['ViewChannel', 'SendMessages', 'ReadMessageHistory'])) {
+    if (message.author.bot) {
+        console.log('Ignoring bot message');
         return;
     }
 
     const activeRiddle = global.activeRiddles?.get(message.channelId);
-    if (!activeRiddle || activeRiddle.solved) return;
+    console.log('Active riddle:', activeRiddle);
 
-    // Debug logging
-    console.log('Message:', message.content);
-    console.log('Answer:', activeRiddle.answer);
-    console.log('Channel:', message.channelId);
+    if (!activeRiddle || activeRiddle.solved) {
+        console.log('No active unsolved riddle');
+        return;
+    }
 
     if (message.content.toLowerCase().trim() === activeRiddle.answer.toLowerCase().trim()) {
         activeRiddle.solved = true;
@@ -116,7 +120,6 @@ client.on('messageCreate', async message => {
                         }
                     }
 
-                    // Send round end message
                     await message.channel.send({
                         embeds: [{
                             title: '🎊 Round Results 🎊',
