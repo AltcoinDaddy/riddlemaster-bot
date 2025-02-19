@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,6 +15,21 @@ module.exports = {
             .setRequired(true)),
     async execute(interaction) {
         try {
+            // Check bot permissions in the channel
+            const channel = interaction.channel;
+            const botPermissions = channel.permissionsFor(interaction.client.user);
+
+            if (!botPermissions.has([
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages,
+                PermissionsBitField.Flags.ReadMessageHistory
+            ])) {
+                return await interaction.reply({
+                    content: 'I need permission to view and send messages in this channel!',
+                    ephemeral: true
+                });
+            }
+
             if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
                 return await interaction.reply({
                     content: 'Only moderators can post riddles!',
@@ -40,7 +55,8 @@ module.exports = {
                 attempts: new Set(),
                 isLastRiddle: isLastRiddle,
                 solved: false,
-                channelId: interaction.channelId
+                channelId: interaction.channelId,
+                question: question  // Store the question too
             });
 
             await interaction.reply({
@@ -52,6 +68,14 @@ module.exports = {
                         text: isLastRiddle ? '🔥 Final riddle!' : 'Keep going!'
                     }
                 }]
+            });
+
+            // Log for debugging
+            console.log('Riddle posted:', {
+                channel: interaction.channelId,
+                question: question,
+                answer: answer,
+                isLastRiddle: isLastRiddle
             });
 
             global.roundManager.addQuestion();

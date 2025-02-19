@@ -12,7 +12,9 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.GuildModeration
+        GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildIntegrations
     ]
 });
 
@@ -46,14 +48,22 @@ client.on('interactionCreate', async interaction => {
 
 // Handle message-based riddle solving
 client.on('messageCreate', async message => {
+    // Ignore bot messages
     if (message.author.bot) return;
+
+    // Check channel permissions
+    const botPermissions = message.channel.permissionsFor(client.user);
+    if (!botPermissions?.has(['ViewChannel', 'SendMessages', 'ReadMessageHistory'])) {
+        return;
+    }
 
     const activeRiddle = global.activeRiddles?.get(message.channelId);
     if (!activeRiddle || activeRiddle.solved) return;
 
-    // For debugging
+    // Debug logging
     console.log('Message:', message.content);
     console.log('Answer:', activeRiddle.answer);
+    console.log('Channel:', message.channelId);
 
     if (message.content.toLowerCase().trim() === activeRiddle.answer.toLowerCase().trim()) {
         activeRiddle.solved = true;
