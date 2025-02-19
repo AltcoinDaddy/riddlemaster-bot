@@ -16,14 +16,14 @@ module.exports = {
     async execute(interaction) {
         try {
             if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
-                return interaction.reply({
+                return await interaction.reply({
                     content: 'Only moderators can post riddles!',
                     ephemeral: true
                 });
             }
 
             if (!global.roundManager.isRoundActive) {
-                return interaction.reply({
+                return await interaction.reply({
                     content: 'No active round! Use /startround to begin.',
                     ephemeral: true
                 });
@@ -35,12 +35,12 @@ module.exports = {
             const currentQuestion = global.roundManager.questionsInRound + 1;
             const isLastRiddle = currentQuestion >= global.roundManager.maxQuestions;
 
-            global.activeRiddles = global.activeRiddles || new Map();
             global.activeRiddles.set(interaction.channelId, {
                 answer: answer,
                 attempts: new Set(),
                 isLastRiddle: isLastRiddle,
-                solved: false
+                solved: false,
+                channelId: interaction.channelId
             });
 
             await interaction.reply({

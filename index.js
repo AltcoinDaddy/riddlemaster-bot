@@ -22,10 +22,11 @@ global.activeRiddles = new Map();
 client.commands = new Collection();
 
 // Load commands
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
+    const command = require(path.join(commandsPath, file));
     client.commands.set(command.data.name, command);
 }
 
@@ -39,14 +40,7 @@ client.on('interactionCreate', async interaction => {
     try {
         await command.execute(interaction);
     } catch (error) {
-        console.error(`Command error: ${interaction.commandName}`, error);
-        if (!interaction.replied && !interaction.deferred) {
-            try {
-                await interaction.reply({ content: 'An error occurred!', ephemeral: true });
-            } catch (err) {
-                console.error('Error sending error message:', err);
-            }
-        }
+        console.error(`Command error:`, error);
     }
 });
 
@@ -57,7 +51,11 @@ client.on('messageCreate', async message => {
     const activeRiddle = global.activeRiddles?.get(message.channelId);
     if (!activeRiddle || activeRiddle.solved) return;
 
-    if (message.content.toLowerCase() === activeRiddle.answer.toLowerCase()) {
+    // For debugging
+    console.log('Message:', message.content);
+    console.log('Answer:', activeRiddle.answer);
+
+    if (message.content.toLowerCase().trim() === activeRiddle.answer.toLowerCase().trim()) {
         activeRiddle.solved = true;
         
         try {
@@ -76,9 +74,6 @@ client.on('messageCreate', async message => {
                 .upsert({
                     discord_id: message.author.id,
                     score: newScore
-                }, {
-                    onConflict: 'discord_id',
-                    update: { score: newScore }
                 });
 
             // Send success message
@@ -90,7 +85,6 @@ client.on('messageCreate', async message => {
                 }]
             });
 
-            // Handle round ending
             if (activeRiddle.isLastRiddle) {
                 const { data: winners } = await supabase
                     .from('users')
@@ -112,14 +106,14 @@ client.on('messageCreate', async message => {
                         }
                     }
 
-                    // Send winners message
+                    // Send round end message
                     await message.channel.send({
                         embeds: [{
-                            title: '🎊 Final Results 🎊',
+                            title: '🎊 Round Results 🎊',
                             description: winnersText,
                             color: 0xffd700,
                             footer: {
-                                text: 'Type /startround to begin a new round!'
+                                text: '🎮 Use /startround to begin a new round!'
                             }
                         }]
                     });
@@ -137,12 +131,10 @@ client.on('messageCreate', async message => {
     }
 });
 
-// Ready event
 client.once('ready', () => {
     console.log('RiddleMaster is online!');
 });
 
-// Error handling
 client.on('error', error => {
     console.error('Client error:', error);
 });
@@ -151,7 +143,6 @@ process.on('unhandledRejection', error => {
     console.error('Unhandled promise rejection:', error);
 });
 
-// Login
 client.login(token).catch(error => {
     console.error('Failed to login:', error);
 });
